@@ -1,0 +1,92 @@
+[project]
+name = "BS_Submission"
+version = "1.0.0"
+description = "Whole-body PET/CT lesion segmentation with prompt channels (autoPET)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Brightskies Inc." }]
+keywords = ["medical image segmentation", "PET/CT", "autoPET", "lesion segmentation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Healthcare Industry",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+
+dependencies = [
+    "torch==2.3.1",
+    "SimpleITK==2.5.5",
+    "lightning==2.5.5",
+    "numpy==2.2.6",
+    "pandas==2.2.3",
+    "scikit-image==0.25.2",
+    "scipy==1.15.3",
+    "tensorboard==2.20.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==9.1.1", "ruff==0.16.5", "black==26.5.1"]
+# Dataset preparation only. Kept out of the base install because training reads prepared arrays
+# and needs none of this, and TotalSegmentator carries its own model weights and a GPU.
+# TotalSegmentator is pinned, not floated. It is the source of the organ masks the PET
+# reference is measured in, so a different version can move the reference and with it the
+# whole PET axis. 2.15.0 is the version the released weights were prepared with, and the
+# one the submission container pins. Floating it also risks pip pairing it with an
+# incompatible nnunetv2: TotalSegmentator 2.15.0 imports
+# nnunetv2.training.dataloading.data_loader, which does not exist before nnunetv2 2.6.
+preprocess = ["tqdm==4.67.1", "TotalSegmentator==2.15.0"]
+# Official scoring and the interactive protocol. Separate because training and
+# prediction need none of it.
+evaluate = ["connected-components-3d==4.0.0", "nibabel==5.4.2", "networkx==3.2.1", "matplotlib==3.10.9"]
+
+[project.scripts]
+bs-train = "BS_Submission.cli:train_entry"
+bs-preprocess = "BS_Submission.preprocessing.cli:main"
+bs-predict = "BS_Submission.inference.cli:main"
+bs-segment = "BS_Submission.inference.segment_cli:main"
+bs-evaluate = "BS_Submission.evaluation.cli:main"
+bs-score = "BS_Submission.evaluation.score_cli:main"
+
+[project.urls]
+Repository = "https://github.com/brightskies/BS_Submission"
+
+[build-system]
+requires = ["setuptools>=67.8.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 120
+target-version = ["py310"]
+# Vendored upstream; see the ruff note below.
+extend-exclude = "src/BS_Submission/models/residual_encoder_unet\\.py|src/BS_Submission/evaluation/upstream/.*\\.py"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+# Vendored verbatim from dynamic-network-architectures; kept byte-identical to upstream so it
+# stays diffable against it, and therefore not linted or reformatted here.
+extend-exclude = [
+    "src/BS_Submission/models/residual_encoder_unet.py",
+    # Vendored unmodified from the challenge organisers; editing it would trigger
+    # the Apache 2.0 obligation to state changes, so it is left exactly as received.
+    "src/BS_Submission/evaluation/upstream",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# zip() length semantics are load-bearing: the deep-supervision weights and the decoder outputs
+# are expected to pair off exactly as they do, and adding strict= would change the failure mode.
+"src/BS_Submission/losses.py" = ["B905"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

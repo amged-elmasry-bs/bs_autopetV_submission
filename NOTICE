@@ -1,0 +1,137 @@
+BS_Submission
+Copyright 2026 Brightskies Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License in the LICENSE file distributed with this work.
+
+--------------------------------------------------------------------------------
+This product includes software developed by third parties:
+
+1. dynamic-network-architectures
+   https://github.com/MIC-DKFZ/dynamic-network-architectures
+   Copyright (c) Division of Medical Image Computing,
+   German Cancer Research Center (DKFZ), Heidelberg, Germany
+   Licensed under the Apache License, Version 2.0.
+
+   The network building blocks in
+   src/BS_Submission/models/residual_encoder_unet.py are vendored verbatim from
+   version 0.4.4 of this package, so that the module depends only on torch and
+   numpy. Class and attribute names are unchanged.
+
+2. nnU-Net
+   https://github.com/MIC-DKFZ/nnUNet
+   Copyright (c) Division of Medical Image Computing,
+   German Cancer Research Center (DKFZ), Heidelberg, Germany
+   Licensed under the Apache License, Version 2.0.
+
+   The residual-encoder U-Net preset reproduces the
+   nnUNetResEncUNetLPlansMultiTalent 3d_fullres plan.
+
+3. autoPET V challenge code
+   https://github.com/lab-midas/autoPETV  (commit 231d9a8, 2026-06-17)
+   Licensed under the Apache License, Version 2.0.
+
+   src/BS_Submission/evaluation/upstream/metrics.py and simulate_scribbles.py are
+   unmodified copies. metrics.py is the official scorer; simulate_scribbles.py defines
+   the interactive correction protocol. Both are used verbatim so that reported numbers
+   remain comparable with other entries, and are excluded from this repository's linting
+   and formatting so they stay diffable against upstream.
+
+   The upstream repository ships no NOTICE file, and its LICENSE carries the unfilled
+   Apache copyright template, so no specific copyright line is available to reproduce;
+   attribution is by repository and commit above.
+
+--------------------------------------------------------------------------------
+Dataset
+--------------------------------------------------------------------------------
+
+The models distributed with this work are trained on the autoPET whole-body
+PET/CT lesion databases. The imaging data is NOT redistributed here; it must be
+obtained from the sources below, under their terms.
+
+   A whole-body FDG-PET/CT dataset with manually annotated tumor lesions
+   (FDG-PET-CT-Lesions)
+   Gatidis S, Kuestner T.  The Cancer Imaging Archive, 2022.
+   DICOM (TCIA):   https://doi.org/10.7937/gkr0-xv29
+   NIfTI (FDAT):   https://doi.org/10.57754/FDAT.8f14a-pf846
+   Paper:          https://doi.org/10.1038/s41597-022-01718-3
+
+   A whole-body PSMA-PET/CT dataset with manually annotated tumor lesions
+   (PSMA-PET-CT-Lesions), Version 1
+   Jeblick K, et al.  The Cancer Imaging Archive, 2024.
+   DICOM (TCIA):   https://doi.org/10.7937/r7ep-3x37
+   NIfTI (FDAT):   https://doi.org/10.57754/FDAT.g27kx-86t35
+
+   The cohort actually used here is the organisers' combined FDG + PSMA release of
+   these two databases, 1611 cases:
+   NIfTI (FDAT):   https://doi.org/10.57754/FDAT.rdkqd-wdh87
+
+   The prompt heatmaps that form input channels 2 and 3 are published by the
+   organisers in the challenge repository, as nnunet-baseline/heatmaps.zip:
+   https://github.com/lab-midas/autoPETV
+
+   Both databases are dual-licensed by their creators: the DICOM form under the
+   TCIA Restricted License, which requires a signed license agreement before
+   access, and the NIfTI form under the Creative Commons Attribution-
+   NonCommercial 4.0 International licence (CC BY-NC 4.0),
+   https://creativecommons.org/licenses/by-nc/4.0/
+
+   CC BY-NC 4.0 permits non-commercial use with attribution, and this section is
+   that attribution. It is not a permissive licence, and it differs from the
+   Apache 2.0 licence covering the source code in this repository: the licence
+   on the code grants nothing over the data. The organisers ask to be contacted
+   before the databases are used in a commercial setting (https://autopet.org).
+
+   Two files tracked in this repository are keyed on the databases' case
+   identifiers, and are derived from them rather than authored here:
+
+     splits/fold_*.csv               the five-fold case assignment, which
+                                     originates in the splits_final.json
+                                     distributed alongside the data
+
+     assets/preprocessing/ref.json   one PET reference value per case, computed
+                                     from that case's own voxels by
+                                     preprocessing/reference.py
+
+   Neither holds image data and neither can reconstruct any. They are recorded
+   here so their origin is on the record.
+
+--------------------------------------------------------------------------------
+Model weights
+--------------------------------------------------------------------------------
+
+Training initialises from the per-fold checkpoints of:
+
+   autoPET III LesionTracer
+   Rokuss, Maximilian -- German Cancer Research Center (DKFZ)
+   Published 2024-09-15 via Zenodo: https://zenodo.org/records/14007247
+   Code: https://github.com/MIC-DKFZ/autopet-3-submission
+   Paper: "From FDG to PSMA: A Hitchhiker's Guide to Multitracer, Multicenter
+          Lesion Segmentation in PET/CT Imaging", arXiv:2409.09478
+
+   Licensed under the Creative Commons Attribution 4.0 International licence
+   (CC-BY-4.0). Note this differs from the Apache 2.0 licence covering the source
+   code in this repository: the weights are CC-BY-4.0, the code is Apache 2.0.
+
+   CHANGES MADE. The published checkpoints take two input channels (CT and PET).
+   For use here they were widened to four by zero-padding the stem convolution's
+   input dimension, adding two prompt channels that contribute nothing at
+   initialisation; every trained weight is otherwise unchanged. The conversion is
+   scripts/prepare_pretrained.py. CC-BY-4.0 requires such changes to be indicated,
+   which this paragraph does.
+
+   CC-BY-4.0 is not a copyleft licence: it permits adaptations to be released under
+   different terms, so the weights trained here were free to carry any licence, with
+   the attribution above retained.
+
+   The weights trained here are published as:
+
+      BS: Take the Hint -- Interactive Multitracer PET/CT Lesion Segmentation with a
+      Scribble-Conditioned ResEnc U-Net
+      Elmasry, A.; Sherif, M.; Ghazal, Y.; Elghotni, A.  Brightskies Inc.
+      https://doi.org/10.5281/zenodo.22176946   (version)
+      https://doi.org/10.5281/zenodo.22176945   (concept, newest version)
+
+      Released under CC-BY-4.0 -- the same licence as the weights they were
+      initialised from, and NOT the Apache 2.0 covering this repository's source.
