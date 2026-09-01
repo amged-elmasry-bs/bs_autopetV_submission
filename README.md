@@ -476,8 +476,10 @@ state the change, and an accidental formatter run should fail rather than create
 
 ## Docker
 
-The image contains the **code and its dependencies only**, including both extras, so all six
-commands run in it. Data, weights and outputs are mounted at run time, never baked in.
+The image contains the **code, its dependencies and the repository's own small data files** —
+both extras, so all six commands run in it, plus [`splits/`](splits/) and
+[`assets/preprocessing/`](assets/preprocessing/) so that `--fold` and `--ref-json` resolve inside
+the container. Datasets, model weights and outputs are mounted at run time, never baked in.
 
 TotalSegmentator's *model weights* are deliberately **not** baked in: they are non-commercial, and
 shipping them inside a permissively licensed image would redistribute them. They download on first
@@ -510,13 +512,29 @@ docker run --rm --gpus all \
 Any other command is named the same way:
 
 ```bash
-docker run --rm --gpus all -v /path/to/prepared:/data -v $PWD/runs:/output \
-  bs-submission:latest bs-predict --fold 0 --data-root /data --out-dir /output/pred0
+docker run --rm --gpus all \
+  -v /path/to/prepared:/data \
+  -v $PWD/assets/model:/weights \
+  -v $PWD/runs:/output \
+  bs-submission:latest \
+    bs-predict \
+    --fold 0 \
+    --data-root /data \
+    --model-dir /weights \
+    --out-dir /output/pred0
 ```
+
+`--fold` finds the split CSVs in the image, but **the trained weights are not in it** — they are
+mounted, so point `--model-dir` at the mount. `bs-evaluate` takes the same `--model-dir`; `bs-train`
+above names `--checkpoint-path` directly for the same reason.
 
 Paths in the arguments are the **container's** (`/data`, `/weights`, `/output`), not the host's.
 `--rm` removes the container when it exits; the image and anything written to `/output` remain. Run
 with no arguments to get `bs-train --help`.
+
+The container runs as its own unprivileged user rather than yours, so whatever is mounted at
+`/output` must be writable by it — `chmod 777 runs` once after creating it, or mount a directory the
+container can already write. Otherwise the run fails on its first write with `PermissionError`.
 
 ### Moving it to a machine with no internet
 

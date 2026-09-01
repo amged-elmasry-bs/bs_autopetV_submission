@@ -23,7 +23,15 @@ ENV PATH="/home/user/.local/bin:$PATH"
 # use instead; set TOTALSEG_HOME_DIR to a mounted cache to keep a run offline.
 RUN python -m pip install --user --no-cache-dir ".[preprocess,evaluate]"
 
-# Data, weights and outputs are mounted, never baked in.
+# The repository's own small data files, copied after the install so editing them does not
+# invalidate the dependency layer. They are version-controlled code-adjacent data, not model
+# weights: `--fold` resolves the split CSVs from `splits/`, and
+# `--ref-json assets/preprocessing/ref.json` prepares the cohort without re-running the `ref`
+# stage. Without them every `--fold` in the image fails looking for `splits/fold_<n>_*.csv`.
+COPY --chown=user:user splits ./splits
+COPY --chown=user:user assets/preprocessing ./assets/preprocessing
+
+# Data, model weights and outputs are mounted, never baked in.
 VOLUME ["/data", "/weights", "/output"]
 
 # No fixed entry point: the image carries six commands and pinning one would make the rest
